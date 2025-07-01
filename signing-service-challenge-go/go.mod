@@ -1,3 +1,3 @@
-module github.com/fiskaly/coding-challenges/signing-service-challenge
+module github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge
 
 go 1.20
