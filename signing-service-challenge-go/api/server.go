@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/persistence"
 )
 
 // Response is the generic API response container.
@@ -18,13 +20,14 @@ type ErrorResponse struct {
 // Server manages HTTP requests and dispatches them to the appropriate services.
 type Server struct {
 	listenAddress string
+	store         persistence.DeviceStore
 }
 
 // NewServer is a factory to instantiate a new Server.
-func NewServer(listenAddress string) *Server {
+func NewServer(listenAddress string, store persistence.DeviceStore) *Server {
 	return &Server{
 		listenAddress: listenAddress,
-		// TODO: add services / further dependencies here ...
+		store:         store,
 	}
 }
 
