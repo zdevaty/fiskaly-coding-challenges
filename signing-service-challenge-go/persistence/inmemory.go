@@ -14,6 +14,7 @@ var (
 type DeviceStore interface {
 	Create(device domain.SignatureDevice) error
 	Get(id string) (domain.SignatureDevice, error)
+	Update(device domain.SignatureDevice) error
 }
 
 type InMemoryDeviceStore struct {
@@ -32,6 +33,16 @@ func (s *InMemoryDeviceStore) Create(device domain.SignatureDevice) error {
 	}
 
 	s.devices[device.ID] = device
+	return nil
+}
+
+func (s *InMemoryDeviceStore) Update(device domain.SignatureDevice) error {
+	device, exists := s.devices[device.ID]
+	if !exists {
+		return ErrDeviceNotFound
+	}
+	s.devices[device.ID] = device
+
 	return nil
 }
 
