@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/domain"
 )
@@ -19,6 +20,7 @@ type DeviceStore interface {
 
 type InMemoryDeviceStore struct {
 	devices map[string]domain.SignatureDevice
+	mutex   sync.Mutex // map is not concurrency safe
 }
 
 func NewInMemoryDeviceStore() *InMemoryDeviceStore {
@@ -28,6 +30,9 @@ func NewInMemoryDeviceStore() *InMemoryDeviceStore {
 }
 
 func (s *InMemoryDeviceStore) Create(device domain.SignatureDevice) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if _, exists := s.devices[device.ID]; exists {
 		return ErrDeviceExists
 	}
@@ -37,6 +42,9 @@ func (s *InMemoryDeviceStore) Create(device domain.SignatureDevice) error {
 }
 
 func (s *InMemoryDeviceStore) Update(device domain.SignatureDevice) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	device, exists := s.devices[device.ID]
 	if !exists {
 		return ErrDeviceNotFound
@@ -47,6 +55,9 @@ func (s *InMemoryDeviceStore) Update(device domain.SignatureDevice) error {
 }
 
 func (s *InMemoryDeviceStore) Get(id string) (domain.SignatureDevice, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	device, exists := s.devices[id]
 	if !exists {
 		return domain.SignatureDevice{}, ErrDeviceNotFound
