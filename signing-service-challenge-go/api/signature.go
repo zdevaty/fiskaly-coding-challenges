@@ -1,18 +1,10 @@
 package api
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"net/http"
 
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/crypt"
@@ -94,33 +86,4 @@ func signData(data string, algorithm string, privateKey []byte) ([]byte, error) 
 	}
 
 	return signer.Sign([]byte(data))
-}
-
-func signWithECC(data string, privateKey []byte) ([]byte, error) {
-	privKey, err := x509.ParseECPrivateKey(privateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	hash := sha256.Sum256([]byte(data))
-	r, s, err := ecdsa.Sign(rand.Reader, privKey, hash[:])
-	if err != nil {
-		return nil, err
-	}
-
-	return asn1.Marshal(ecdsaSignature{r, s})
-}
-
-func signWithRSA(data string, privateKey []byte) ([]byte, error) {
-	privKey, err := x509.ParsePKCS1PrivateKey(privateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	hash := sha256.Sum256([]byte(data))
-	return rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, hash[:])
-}
-
-type ecdsaSignature struct {
-	R, S *big.Int
 }
