@@ -37,7 +37,7 @@ func (s *Server) Run() error {
 
 	mux.Handle("GET /api/v0/health", http.HandlerFunc(s.Health))
 
-	mux.Handle("POST /api/v0/device/create", http.HandlerFunc(s.CreateSignatureDevice))
+	mux.Handle("POST /api/v0/devices", http.HandlerFunc(s.CreateSignatureDevice))
 
 	// TODO: register further HandlerFuncs here ...
 
