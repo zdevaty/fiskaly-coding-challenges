@@ -14,6 +14,7 @@ type Response struct {
 
 // ErrorResponse is the generic error API response container.
 type ErrorResponse struct {
+	// todo: use this!
 	Errors []string `json:"errors"`
 }
 
@@ -21,27 +22,25 @@ type ErrorResponse struct {
 type Server struct {
 	listenAddress string
 	store         persistence.DeviceStore
+	Mux           *http.ServeMux // Makes mux available for testing
 }
 
-// NewServer is a factory to instantiate a new Server.
 func NewServer(listenAddress string, store persistence.DeviceStore) *Server {
-	return &Server{
+	mux := http.NewServeMux()
+	server := &Server{
 		listenAddress: listenAddress,
 		store:         store,
+		Mux:           mux,
 	}
+
+	mux.HandleFunc("GET /api/v0/health", server.Health)
+	mux.HandleFunc("POST /api/v0/devices", server.CreateSignatureDevice)
+	mux.HandleFunc("POST /api/v0/devices/{id}/sign", server.SignData)
+	return server
 }
 
-// Run registers all HandlerFuncs for the existing HTTP routes and starts the Server.
 func (s *Server) Run() error {
-	mux := http.NewServeMux()
-
-	mux.Handle("GET /api/v0/health", http.HandlerFunc(s.Health))
-
-	mux.Handle("POST /api/v0/devices", http.HandlerFunc(s.CreateSignatureDevice))
-	mux.Handle("POST /api/v0/devices/{id}/sign", http.HandlerFunc(s.SignData))
-	// TODO: list/retrieval endpoints
-
-	return http.ListenAndServe(s.listenAddress, mux)
+	return http.ListenAndServe(s.listenAddress, s.Mux)
 }
 
 // WriteInternalError writes a default internal error message as an HTTP response.

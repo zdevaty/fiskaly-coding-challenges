@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/crypt"
@@ -15,13 +16,18 @@ type signRequest struct {
 	DataToBeSigned string `json:"data_to_be_signed"`
 }
 
-type signResponse struct {
+type SignResponse struct {
 	Signature  string `json:"signature"`
 	SignedData string `json:"signed_data"`
 }
 
 func (s *Server) SignData(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "device ID is required", http.StatusBadRequest)
+		return
+	}
+
 	device, err := s.store.Get(id)
 	if err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
@@ -33,6 +39,12 @@ func (s *Server) SignData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	defer r.Body.Close()
+
+	if req.DataToBeSigned == "" {
+		http.Error(w, "data_to_be_signed is required", http.StatusBadRequest)
+		return
+	}
 
 	counter := device.SignatureCounter
 	lastSignature := getLastSignature(device)
@@ -41,6 +53,7 @@ func (s *Server) SignData(w http.ResponseWriter, r *http.Request) {
 
 	signature, err := signData(securedData, device.Algorithm, device.PrivateKey)
 	if err != nil {
+		log.Default().Printf("signing data: %v", err)
 		http.Error(w, "Signing failed", http.StatusInternalServerError)
 		return
 	}
@@ -52,7 +65,7 @@ func (s *Server) SignData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := signResponse{
+	response := SignResponse{
 		Signature:  base64.StdEncoding.EncodeToString(signature),
 		SignedData: securedData,
 	}
