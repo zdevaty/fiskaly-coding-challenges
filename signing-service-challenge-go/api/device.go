@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/crypto"
+	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/crypt"
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/domain"
 )
 
@@ -40,7 +40,7 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 
 	switch req.Algorithm {
 	case "ECC":
-		generator := crypto.ECCGenerator{}
+		generator := crypt.ECCGenerator{}
 		keypair, err := generator.Generate()
 		if err != nil {
 			http.Error(w, "key generation failed: "+err.Error(), http.StatusInternalServerError)
@@ -50,7 +50,7 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		privateKey = marshalECCPrivateKey(keypair.Private)
 
 	case "RSA":
-		generator := crypto.RSAGenerator{}
+		generator := crypt.RSAGenerator{}
 		keypair, err := generator.Generate()
 		if err != nil {
 			http.Error(w, "key generation failed: "+err.Error(), http.StatusInternalServerError)

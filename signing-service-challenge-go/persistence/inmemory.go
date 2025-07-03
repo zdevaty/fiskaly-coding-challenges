@@ -45,8 +45,7 @@ func (s *InMemoryDeviceStore) Update(device domain.SignatureDevice) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	device, exists := s.devices[device.ID]
-	if !exists {
+	if _, exists := s.devices[device.ID]; !exists {
 		return ErrDeviceNotFound
 	}
 	s.devices[device.ID] = device
