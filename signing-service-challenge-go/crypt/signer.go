@@ -7,7 +7,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/asn1"
 )
 
 // Signer defines a contract for different types of signing implementations.
@@ -48,9 +47,5 @@ func NewECCKeySigner(privateKeyBytes []byte) (*ECCKeySigner, error) {
 
 func (s *ECCKeySigner) Sign(dataToBeSigned []byte) ([]byte, error) {
 	hashed := sha256.Sum256(dataToBeSigned)
-	asn, err := ecdsa.SignASN1(rand.Reader, s.privateKey, hashed[:])
-	if err != nil {
-		return nil, err
-	}
-	return asn1.Marshal(asn)
+	return ecdsa.SignASN1(rand.Reader, s.privateKey, hashed[:])
 }
