@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/api"
+	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/domain"
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/persistence"
 )
 
@@ -18,28 +19,34 @@ func setupTestServer() (*api.Server, *persistence.InMemoryDeviceStore) {
 	store := persistence.NewInMemoryDeviceStore()
 	server := api.NewServer(":8080", store)
 
-	reqBody := `{
-		"id": "test-device",
+	createReq := map[string]string{
+		"id":        "test-device",
 		"algorithm": domain.AlgorithmECC,
-		"label": "Test Device"
-	}`
+		"label":     "Test Device",
+	}
+	reqBody, _ := json.Marshal(createReq)
 
 	req := httptest.NewRequest(
 		"POST",
 		"/api/v0/devices",
-		bytes.NewBufferString(reqBody),
+		bytes.NewReader(reqBody),
 	)
 	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
-	server.CreateSignatureDevice(rr, req)
+
+	setupMux := http.NewServeMux()
+	setupMux.HandleFunc("POST /api/v0/devices", server.CreateSignatureDevice)
+
+	setupMux.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusCreated {
-		panic(fmt.Sprintf("failed to create test device: %s", rr.Body.String()))
+		panic(fmt.Sprintf("failed to create test device: status %d, body %s", rr.Code, rr.Body.String()))
 	}
 
 	return server, store
 }
+
 func TestSignData(t *testing.T) {
 	server, store := setupTestServer()
 
@@ -74,7 +81,6 @@ func TestSignData(t *testing.T) {
 				bytes.NewBufferString(tt.requestBody),
 			)
 			req.Header.Set("Content-Type", "application/json")
-			req = req.WithContext(req.Context())
 			rr := httptest.NewRecorder()
 			// Route the request through the ServeMux so that path params are passed
 			server.Mux.ServeHTTP(rr, req)
@@ -82,12 +88,20 @@ func TestSignData(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, rr.Code, "unexpected status code")
 
 			if tt.expectedStatus == http.StatusOK {
-				var resp api.SignResponse
+				var resp api.Response
 				err := json.NewDecoder(rr.Body).Decode(&resp)
 				assert.NoError(t, err, "failed to decode response")
-				if tt.validate != nil {
-					tt.validate(t, &resp)
+				data, ok := resp.Data.(map[string]interface{})
+				assert.True(t, ok, "response data should be a map")
+				signResp := api.SignResponse{
+					Signature:  data["signature"].(string),
+					SignedData: data["signed_data"].(string),
 				}
+				if tt.validate != nil {
+					tt.validate(t, &signResp)
+				}
+			} else {
+				// Test user error handling
 			}
 		})
 	}

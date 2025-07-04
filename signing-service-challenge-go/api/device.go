@@ -29,7 +29,7 @@ type createSignatureDeviceResponse struct {
 func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 	var req createSignatureDeviceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteErrorResponse(w, http.StatusInternalServerError, []string{"decoding request: " + err.Error()})
 		return
 	}
 
@@ -43,7 +43,7 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		generator := crypt.ECCGenerator{}
 		keypair, err := generator.Generate()
 		if err != nil {
-			http.Error(w, "key generation failed: "+err.Error(), http.StatusInternalServerError)
+			WriteErrorResponse(w, http.StatusInternalServerError, []string{"ecc key generation failed: " + err.Error()})
 			return
 		}
 		publicKey = marshalECCPublicKey(keypair.Public)
@@ -53,14 +53,14 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		generator := crypt.RSAGenerator{}
 		keypair, err := generator.Generate()
 		if err != nil {
-			http.Error(w, "key generation failed: "+err.Error(), http.StatusInternalServerError)
+			WriteErrorResponse(w, http.StatusInternalServerError, []string{"rsa key generation failed: " + err.Error()})
 			return
 		}
 		publicKey = marshalRSAPublicKey(keypair.Public)
 		privateKey = marshalRSAPrivateKey(keypair.Private)
 
 	default:
-		http.Error(w, "unsupported algorithm", http.StatusBadRequest)
+		WriteErrorResponse(w, http.StatusBadRequest, []string{"Unsupported algorithm"})
 		return
 	}
 
@@ -72,7 +72,7 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		PrivateKey: privateKey,
 	}
 	if err := s.store.Create(device); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteErrorResponse(w, http.StatusInternalServerError, []string{"Failed to create device"})
 		return
 	}
 
@@ -83,9 +83,7 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		PublicKey: base64.StdEncoding.EncodeToString(device.PublicKey),
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	WriteAPIResponse(w, http.StatusCreated, response)
 }
 
 func marshalECCPublicKey(pub *ecdsa.PublicKey) []byte {

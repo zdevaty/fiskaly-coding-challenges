@@ -14,7 +14,6 @@ type Response struct {
 
 // ErrorResponse is the generic error API response container.
 type ErrorResponse struct {
-	// todo: use this!
 	Errors []string `json:"errors"`
 }
 

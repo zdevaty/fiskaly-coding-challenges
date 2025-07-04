@@ -24,44 +24,44 @@ type SignResponse struct {
 func (s *Server) SignData(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "device ID is required", http.StatusBadRequest)
+		WriteErrorResponse(w, http.StatusBadRequest, []string{"device ID is required"})
 		return
 	}
 
 	device, err := s.store.Get(id)
 	if err != nil {
-		http.Error(w, "Device not found", http.StatusNotFound)
+		WriteErrorResponse(w, http.StatusNotFound, []string{"Device not found"})
 		return
 	}
 
 	var req signRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteErrorResponse(w, http.StatusBadRequest, []string{"Invalid request body"})
 		return
 	}
 	defer r.Body.Close()
 
 	if req.DataToBeSigned == "" {
-		http.Error(w, "data_to_be_signed is required", http.StatusBadRequest)
+		WriteErrorResponse(w, http.StatusBadRequest, []string{"data_to_be_signed is required"})
 		return
 	}
 
 	counter := device.SignatureCounter
 	lastSignature := getLastSignature(device)
-
 	securedData := fmt.Sprintf("%d_%s_%s", counter, req.DataToBeSigned, lastSignature)
 
 	signature, err := signData(securedData, device.Algorithm, device.PrivateKey)
 	if err != nil {
 		log.Default().Printf("signing data: %v", err)
-		http.Error(w, "Signing failed", http.StatusInternalServerError)
+		WriteErrorResponse(w, http.StatusInternalServerError, []string{"Signing failed"})
 		return
 	}
 
 	device.LastSignature = base64.StdEncoding.EncodeToString(signature)
 	device.SignatureCounter += 1
+
 	if err := s.store.Update(device); err != nil {
-		http.Error(w, "Failed to update device", http.StatusInternalServerError)
+		WriteErrorResponse(w, http.StatusInternalServerError, []string{"Failed to update device"})
 		return
 	}
 
@@ -69,9 +69,7 @@ func (s *Server) SignData(w http.ResponseWriter, r *http.Request) {
 		Signature:  base64.StdEncoding.EncodeToString(signature),
 		SignedData: securedData,
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	WriteAPIResponse(w, http.StatusOK, response)
 }
 
 func getLastSignature(device domain.SignatureDevice) string {
