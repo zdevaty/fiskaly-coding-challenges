@@ -20,7 +20,7 @@ func setupTestServer() (*api.Server, *persistence.InMemoryDeviceStore) {
 
 	reqBody := `{
 		"id": "test-device",
-		"algorithm": "ECC",
+		"algorithm": domain.AlgorithmECC,
 		"label": "Test Device"
 	}`
 

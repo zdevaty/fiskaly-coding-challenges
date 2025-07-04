@@ -1,5 +1,10 @@
 package domain
 
+const (
+	AlgorithmECC string = "ECC"
+	AlgorithmRSA string = "RSA"
+)
+
 type SignatureDevice struct {
 	ID               string
 	Label            string

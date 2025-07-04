@@ -39,7 +39,7 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 	)
 
 	switch req.Algorithm {
-	case "ECC":
+	case domain.AlgorithmECC:
 		generator := crypt.ECCGenerator{}
 		keypair, err := generator.Generate()
 		if err != nil {
@@ -49,7 +49,7 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		publicKey = marshalECCPublicKey(keypair.Public)
 		privateKey = marshalECCPrivateKey(keypair.Private)
 
-	case "RSA":
+	case domain.AlgorithmRSA:
 		generator := crypt.RSAGenerator{}
 		keypair, err := generator.Generate()
 		if err != nil {

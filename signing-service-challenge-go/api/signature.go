@@ -87,9 +87,9 @@ func signData(data string, algorithm string, privateKey []byte) ([]byte, error) 
 	var err error
 
 	switch algorithm {
-	case "ECC":
+	case domain.AlgorithmECC:
 		signer, err = crypt.NewECCKeySigner(privateKey)
-	case "RSA":
+	case domain.AlgorithmRSA:
 		signer, err = crypt.NewRSAKeySigner(privateKey)
 	default:
 		return nil, errors.New("unsupported algorithm")
