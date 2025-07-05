@@ -10,6 +10,7 @@ import (
 
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/crypt"
 	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/domain"
+	"github.com/zdevaty/fiskaly-coding-challenges/signing-service-challenge/persistence"
 )
 
 type signRequest struct {
@@ -28,46 +29,59 @@ func (s *Server) SignData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, err := s.store.Get(id)
-	if err != nil {
-		WriteErrorResponse(w, http.StatusNotFound, []string{"Device not found"})
-		return
+	var signedData string
+	var signature []byte
+	var (
+		ErrRequest  = errors.New("invalid request")
+		ErrInternal = errors.New("internal error")
+	)
+	operation := func(device *domain.SignatureDevice) error {
+		var req signRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return fmt.Errorf("invalid request body: %w", err)
+		}
+		defer r.Body.Close()
+
+		if req.DataToBeSigned == "" {
+			return fmt.Errorf("%w: data_to_be_signed is required", ErrRequest)
+		}
+
+		counter := device.SignatureCounter
+		lastSignature := getLastSignature(*device)
+		signedData = fmt.Sprintf("%d_%s_%s", counter, req.DataToBeSigned, lastSignature)
+
+		var err error
+		signature, err = signData(signedData, device.Algorithm, device.PrivateKey)
+		if err != nil {
+			return fmt.Errorf("%w: signing failed: %v", ErrInternal, err)
+		}
+
+		device.LastSignature = base64.StdEncoding.EncodeToString(signature)
+		device.SignatureCounter += 1
+		return nil
 	}
 
-	var req signRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteErrorResponse(w, http.StatusBadRequest, []string{"Invalid request body"})
-		return
-	}
-	defer r.Body.Close()
-
-	if req.DataToBeSigned == "" {
-		WriteErrorResponse(w, http.StatusBadRequest, []string{"data_to_be_signed is required"})
-		return
-	}
-
-	counter := device.SignatureCounter
-	lastSignature := getLastSignature(device)
-	securedData := fmt.Sprintf("%d_%s_%s", counter, req.DataToBeSigned, lastSignature)
-
-	signature, err := signData(securedData, device.Algorithm, device.PrivateKey)
-	if err != nil {
-		log.Default().Printf("signing data: %v", err)
-		WriteErrorResponse(w, http.StatusInternalServerError, []string{"Signing failed"})
-		return
-	}
-
-	device.LastSignature = base64.StdEncoding.EncodeToString(signature)
-	device.SignatureCounter += 1
-
-	if err := s.store.Update(device); err != nil {
-		WriteErrorResponse(w, http.StatusInternalServerError, []string{"Failed to update device"})
+	if err := s.store.InTx(id, operation); err != nil {
+		var status int
+		var msg string
+		switch {
+		case errors.Is(err, persistence.ErrDeviceNotFound):
+			status, msg = http.StatusNotFound, err.Error()
+		case errors.Is(err, ErrRequest):
+			status, msg = http.StatusBadRequest, err.Error()
+		case errors.Is(err, ErrInternal):
+			status, msg = http.StatusInternalServerError, err.Error()
+		default:
+			status, msg = http.StatusInternalServerError, "Operation failed"
+			log.Default().Printf("unexpected error: %v", err)
+		}
+		WriteErrorResponse(w, status, []string{msg})
 		return
 	}
 
 	response := SignResponse{
 		Signature:  base64.StdEncoding.EncodeToString(signature),
-		SignedData: securedData,
+		SignedData: signedData,
 	}
 	WriteAPIResponse(w, http.StatusOK, response)
 }
