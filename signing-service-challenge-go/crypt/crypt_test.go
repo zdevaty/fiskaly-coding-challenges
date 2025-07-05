@@ -41,35 +41,29 @@ func TestRSASigning(t *testing.T) {
 }
 
 func TestECCSigning(t *testing.T) {
-	// Generate ECC key pair
 	eccGenerator := crypt.ECCGenerator{}
 	eccKeyPair, err := eccGenerator.Generate()
 	if err != nil {
 		t.Fatalf("Failed to generate ECC key pair: %v", err)
 	}
 
-	// Marshal the private key to bytes
 	privateKeyBytes, err := x509.MarshalECPrivateKey(eccKeyPair.Private)
 	if err != nil {
 		t.Fatalf("Failed to marshal ECC private key: %v", err)
 	}
 
-	// Create ECC signer
 	eccSigner, err := crypt.NewECCKeySigner(privateKeyBytes)
 	if err != nil {
 		t.Fatalf("Failed to create ECC signer: %v", err)
 	}
 
-	// Data to be signed
 	dataToBeSigned := []byte("test data")
 
-	// Sign the data
 	signature, err := eccSigner.Sign(dataToBeSigned)
 	if err != nil {
 		t.Fatalf("Failed to sign data: %v", err)
 	}
 
-	// Verify the signature
 	hashed := sha256.Sum256(dataToBeSigned)
 	valid := ecdsa.VerifyASN1(eccKeyPair.Public, hashed[:], signature)
 	if !valid {
@@ -78,7 +72,6 @@ func TestECCSigning(t *testing.T) {
 }
 
 func TestDataFormatting(t *testing.T) {
-	// Mock data
 	signatureCounter := 0
 	dataToBeSigned := "test data"
 	deviceID := "device123"
