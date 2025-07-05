@@ -35,6 +35,10 @@ func NewServer(listenAddress string, store persistence.DeviceStore) *Server {
 	mux.HandleFunc("GET /api/v0/health", server.Health)
 	mux.HandleFunc("POST /api/v0/devices", server.CreateSignatureDevice)
 	mux.HandleFunc("POST /api/v0/devices/{id}/sign", server.SignData)
+	// TODO: List / retrieval operations for devices:
+	// GET /api/v0/devices/
+	// GET /api/v0/devices/{id}
+
 	return server
 }
 
